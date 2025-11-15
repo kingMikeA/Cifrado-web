@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cifrado César y Vigenère Web</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos base: fuente profesional y centrado */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+        }
+    </style>
+    <script>
+        // Configuración de fuente (Opcional, pero mejora la estética)
+        tailwind.config = {
+          theme: {
+            extend: {
+              fontFamily: {
+                sans: ['Inter', 'sans-serif'],
+              },
+            },
+          }
+        }
+    </script>
+</head>
+<body>
+
+<div id="app" class="w-full max-w-2xl bg-white shadow-2xl rounded-2xl p-8 transition-all duration-300 border-t-4 border-indigo-600">
+    <h1 class="text-3xl font-extrabold text-center text-indigo-700 mb-2">
+        PROYECTO DE CIFRADO
+    </h1>
+    <p class="text-center text-sm text-gray-500 mb-8">César & Vigenère - Aplicación Web</p>
+
+    <div class="flex flex-wrap gap-4 mb-6">
+        
+        <div class="p-4 border border-indigo-200 bg-indigo-50 rounded-lg flex-1 min-w-[200px] shadow-sm">
+            <label class="block text-sm font-bold text-indigo-700 mb-2">Tipo de Cifrado</label>
+            <div class="flex space-x-4">
+                <label class="inline-flex items-center">
+                    <input type="radio" name="cifrado" value="cesar" checked onchange="actualizarClaveLabel(this.value)" class="form-radio text-indigo-600 h-4 w-4">
+                    <span class="ml-2 text-gray-800">César</span>
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="cifrado" value="vigenere" onchange="actualizarClaveLabel(this.value)" class="form-radio text-indigo-600 h-4 w-4">
+                    <span class="ml-2 text-gray-800">Vigenère</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="p-4 border border-indigo-200 bg-indigo-50 rounded-lg flex-1 min-w-[200px] shadow-sm">
+            <label class="block text-sm font-bold text-indigo-700 mb-2">Acción</label>
+            <div class="flex space-x-4">
+                <label class="inline-flex items-center">
+                    <input type="radio" name="modo" value="cifrar" checked class="form-radio text-indigo-600 h-4 w-4">
+                    <span class="ml-2 text-gray-800">Cifrar</span>
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="modo" value="descifrar" class="form-radio text-indigo-600 h-4 w-4">
+                    <span class="ml-2 text-gray-800">Descifrar</span>
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mb-6">
+        <label for="textoEntrada" class="block text-sm font-semibold text-gray-700 mb-2">Introduce Texto</label>
+        <textarea id="textoEntrada" rows="6" placeholder="Escribe tu mensaje aquí..."
+                  class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-shadow shadow-inner"></textarea>
+    </div>
+
+    <div class="mb-6">
+        <label id="claveLabel" for="claveInput" class="block text-sm font-semibold text-gray-700 mb-2">
+            Clave (César): NÚMERO de desplazamiento
+        </label>
+        <input type="text" id="claveInput" placeholder="Introduce la clave aquí..."
+               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-shadow shadow-inner">
+    </div>
+
+    <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 mb-8">
+        <button onclick="ejecutarCifrado()"
+                class="flex-1 px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition transform hover:scale-[1.01] duration-200">
+            EJECUTAR CIFRADO
+        </button>
+        <button onclick="limpiarTodo()"
+                class="px-6 py-3 bg-gray-200 text-gray-800 font-semibold rounded-xl hover:bg-gray-300 transition duration-200">
+            Limpiar Todo
+        </button>
+        <button onclick="copiarResultado()"
+                class="px-6 py-3 bg-green-500 text-white font-semibold rounded-xl shadow-md hover:bg-green-600 transition duration-200">
+            Copiar Resultado
+        </button>
+    </div>
+
+    <div class="p-5 bg-green-50 border border-green-200 rounded-xl shadow-inner">
+        <label class="block text-lg font-bold text-green-700 mb-2">RESULTADO:</label>
+        <p id="resultadoOutput" class="text-gray-800 break-words min-h-[4rem] bg-white p-3 rounded shadow-md font-mono"></p>
+    </div>
+
+</div>
+
+<script>
+    
+    // =============================================================================
+    // LÓGICA DE CIFRADO (Funciones de Python traducidas a JavaScript)
+    // =============================================================================
+    
+    function getRadioValue(name) {
+        return document.querySelector(`input[name="${name}"]:checked`).value;
+    }
+
+    /** Cifra un texto utilizando el Cifrado César. */
+    function cifrarCesar(textoPlano, clave) {
+        let textoCifrado = "";
+        const k = clave % 26; 
+        
+        for (let i = 0; i < textoPlano.length; i++) {
+            let caracter = textoPlano[i];
+            let code = caracter.charCodeAt(0);
+
+            // Mayúsculas (A=65 a Z=90)
+            if (code >= 65 && code <= 90) {
+                let posicionP = code - 65; 
+                let posicionC = (posicionP + k) % 26;
+                textoCifrado += String.fromCharCode(posicionC + 65);
+            }
+            // Minúsculas (a=97 a z=122)
+            else if (code >= 97 && code <= 122) {
+                let posicionP = code - 97; 
+                let posicionC = (posicionP + k) % 26;
+                textoCifrado += String.fromCharCode(posicionC + 97);
+            }
+            // Conservar otros caracteres
+            else {
+                textoCifrado += caracter;
+            }
+        }
+        return textoCifrado;
+    }
+
+    /** Descifra un texto utilizando el Cifrado César. */
+    function descifrarCesar(textoCifrado, clave) {
+        let textoDescifrado = "";
+        const k = clave % 26;
+        
+        for (let i = 0; i < textoCifrado.length; i++) {
+            let caracter = textoCifrado[i];
+            let code = caracter.charCodeAt(0);
+
+            // Mayúsculas
+            if (code >= 65 && code <= 90) {
+                let posicionC = code - 65;
+                // Fórmula: P = (C - k + 26) mod 26
+                let posicionP = (posicionC - k + 26) % 26; 
+                textoDescifrado += String.fromCharCode(posicionP + 65);
+            }
+            // Minúsculas
+            else if (code >= 97 && code <= 122) {
+                let posicionC = code - 97;
+                let posicionP = (posicionC - k + 26) % 26; 
+                textoDescifrado += String.fromCharCode(posicionP + 97);
+            }
+            // Conservar otros caracteres
+            else {
+                textoDescifrado += caracter;
+            }
+        }
+        return textoDescifrado;
+    }
+    
+    /** Cifra un texto utilizando el Cifrado Vigenère. */
+    function cifrarVigenere(textoPlano, clave) {
+        let textoCifrado = "";
+        const claveMayus = clave.toUpperCase();
+        let indiceClave = 0; 
+        
+        for (let i = 0; i < textoPlano.length; i++) {
+            let caracter = textoPlano[i];
+            let code = caracter.charCodeAt(0);
+            let esMayuscula = (code >= 65 && code <= 90);
+            let esMinuscula = (code >= 97 && code <= 122);
+
+            if (esMayuscula || esMinuscula) {
+                let letraClave = claveMayus[indiceClave % claveMayus.length];
+                let k = letraClave.charCodeAt(0) - 65; 
+
+                let base = esMayuscula ? 65 : 97;
+                let posicionP = code - base;
+                let posicionC = (posicionP + k) % 26;
+                textoCifrado += String.fromCharCode(posicionC + base);
+                
+                indiceClave++; // Avanzamos índice
+            } else {
+                textoCifrado += caracter; // Conservamos y NO avanzamos índice
+            }
+        }
+        return textoCifrado;
+    }
+
+    /** Descifra un texto utilizando el Cifrado Vigenère. */
+    function descifrarVigenere(textoCifrado, clave) {
+        let textoDescifrado = "";
+        const claveMayus = clave.toUpperCase();
+        let indiceClave = 0; 
+
+        for (let i = 0; i < textoCifrado.length; i++) {
+            let caracter = textoCifrado[i];
+            let code = caracter.charCodeAt(0);
+            let esMayuscula = (code >= 65 && code <= 90);
+            let esMinuscula = (code >= 97 && code <= 122);
+
+            if (esMayuscula || esMinuscula) {
+                let letraClave = claveMayus[indiceClave % claveMayus.length];
+                let k = letraClave.charCodeAt(0) - 65; 
+
+                let base = esMayuscula ? 65 : 97;
+                let posicionC = code - base;
+                // Fórmula: P = (C - k + 26) mod 26
+                let posicionP = (posicionC - k + 26) % 26; 
+                textoDescifrado += String.fromCharCode(posicionP + base);
+                
+                indiceClave++; // Avanzamos índice
+            } else {
+                textoDescifrado += caracter; // Conservamos y NO avanzamos índice
+            }
+        }
+        return textoDescifrado;
+    }
+
+
+    // =============================================================================
+    // MANEJO DE LA INTERFAZ (Funciones de Usuario)
+    // =============================================================================
+
+    /** Cambia el texto de la etiqueta de la clave según el cifrado seleccionado. */
+    function actualizarClaveLabel(tipo) {
+        const label = document.getElementById('claveLabel');
+        const input = document.getElementById('claveInput');
+        if (tipo === 'cesar') {
+            label.textContent = "Clave (César): NÚMERO de desplazamiento";
+            input.placeholder = "Ejemplo: 3 o 15";
+            input.type = 'text'; // Usamos text para permitir la validación
+        } else if (tipo === 'vigenere') {
+            label.textContent = "Clave (Vigenère): FRASE clave (solo letras)";
+            input.placeholder = "Ejemplo: secreto o clave";
+            input.type = 'text';
+        }
+    }
+
+    /** Función principal que ejecuta el cifrado/descifrado. */
+    function ejecutarCifrado() {
+        const tipoCifrado = getRadioValue('cifrado');
+        const modo = getRadioValue('modo');
+        const texto = document.getElementById('textoEntrada').value.trim();
+        const claveStr = document.getElementById('claveInput').value.trim();
+        const outputElement = document.getElementById('resultadoOutput');
+
+        outputElement.classList.remove('text-red-600', 'font-mono'); // Limpiar estilos de error
+        outputElement.classList.add('font-mono');
+
+        if (!texto || !claveStr) {
+            outputElement.textContent = "Error: Introduce el texto y la clave.";
+            outputElement.classList.add('text-red-600');
+            return;
+        }
+
+        let resultado = "";
+
+        try {
+            if (tipoCifrado === 'cesar') {
+                const claveNum = parseInt(claveStr, 10);
+                if (isNaN(claveNum)) {
+                    alert('Error: La clave César debe ser un número entero.');
+                    outputElement.textContent = "Error: La clave César debe ser un NÚMERO entero.";
+                    outputElement.classList.add('text-red-600');
+                    return;
+                }
+                resultado = modo === 'cifrar' ? cifrarCesar(texto, claveNum) : descifrarCesar(texto, claveNum);
+            } 
+            else if (tipoCifrado === 'vigenere') {
+                if (!/^[a-zA-Z]+$/.test(claveStr)) {
+                    alert('Advertencia: La clave Vigenère debe contener solo letras (A-Z).');
+                    outputElement.textContent = "Advertencia: La clave Vigenère debe contener solo letras (A-Z).";
+                    outputElement.classList.add('text-red-600');
+                    return;
+                }
+                resultado = modo === 'cifrar' ? cifrarVigenere(texto, claveStr) : descifrarVigenere(texto, claveStr);
+            }
+
+            outputElement.textContent = resultado;
+            outputElement.classList.remove('text-red-600');
+        } catch (e) {
+            outputElement.textContent = `Error inesperado: ${e.message}`;
+            outputElement.classList.add('text-red-600');
+        }
+    }
+
+    /** Limpia todos los campos. */
+    function limpiarTodo() {
+        document.getElementById('textoEntrada').value = '';
+        document.getElementById('claveInput').value = '';
+        document.getElementById('resultadoOutput').textContent = '';
+        document.querySelector('input[name="cifrado"][value="cesar"]').checked = true;
+        document.querySelector('input[name="modo"][value="cifrar"]').checked = true;
+        actualizarClaveLabel('cesar');
+    }
+
+    /** Copia el resultado al portapapeles. */
+    function copiarResultado() {
+        const resultado = document.getElementById('resultadoOutput').textContent;
+        // Solo copiar si hay un resultado válido
+        if (resultado && resultado.startsWith("Error") === false) { 
+            navigator.clipboard.writeText(resultado).then(() => {
+                alert('Resultado copiado al portapapeles.');
+            }).catch(err => {
+                // Fallback si navigator.clipboard no está disponible
+                const el = document.createElement('textarea');
+                el.value = resultado;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                alert('Resultado copiado al portapapeles (Método antiguo).');
+            });
+        } else {
+            alert('No hay resultado válido para copiar.');
+        }
+    }
+
+    // Ejecutar al cargar la página para inicializar la etiqueta de clave
+    window.onload = () => {
+        actualizarClaveLabel('cesar');
+    };
+
+</script>
+
+</body>
+</html>
