@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consola de Cifrado (César y Vigenère) - Memoria</title>
+    
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Librerías para XLSX (SheetJS) y FileSaver (para guardar) -->
+    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+    <!-- Configuración de la fuente y el tema oscuro por defecto -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        // Usando la fuente retro VT323
+                        sans: ['VT323', 'monospace'],
+                        mono: ['VT323', 'monospace'],
+                    },
+                    colors: {
+                        'bg-dark': '#0f0a28', // Fondo muy oscuro del body
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- ESTILOS CSS PERSONALIZADOS (INTEGRADOS) - Usando VT323 y estética NEON -->
+    <style>
+        /* Importación de la fuente retro */
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        /* Estilos base: Fondo oscuro y degradado. */
+        body {
+            font-family: 'VT323', monospace;
+            background: linear-gradient(145deg, #0f0a28 0%, #1a0f40 100%);
+            min-height: 10vh;
+            padding: 20px;
+            /* Color de texto base (casi blanco) */
+            color: #f7f0f0; 
+        }
+
+        /* Estilos de la caja principal (el "Monitor"). Centrado horizontal. */
+        #app {
+            /* Fondo más negro para mayor contraste */
+            background: rgba(5, 5, 15, 0.95);
+            /* Borde Rojo Intenso */
+            border: 2px solid #e70f0f; 
+            /* Sombra Roja/Púrpura */
+            box-shadow: 0 0 20px rgba(108, 92, 231, 0.7); 
+            
+            /* Centra la consola horizontalmente */
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Efecto de neón en el título h1 (sombra ROJA en CSS) */
+        #app h1 {
+            text-shadow: 0 0 7px #eb0c0c, 0 0 15px #f30d0d; 
+        }
+
+        /* Efecto de borde de neón en los inputs y textareas */
+        .neon-input {
+            background-color: rgba(20, 15, 45, 0.8);
+            border: 1px solid #4a4175;
+            /* Color de texto rojo neón */
+            color: #f00b0b; 
+            /* Sombra de texto rojo/azul */
+            text-shadow: 0 0 5px #011214; 
+        }
+        .neon-input:focus {
+            /* Color de foco púrpura/azul */
+            border-color: #a29bfe;
+            box-shadow: 0 0 10px rgba(162, 155, 254, 0.9);
+        }
+
+        /* Estilos para el botón principal (EJECUTAR) */
+        .btn-neon-primary {
+            background-color: #6c5ce7; /* Púrpura base */
+            text-shadow: 0 0 5px #a29bfe;
+            box-shadow: 0 0 10px rgba(162, 155, 254, 0.8), inset 0 0 5px #a29bfe;
+            transition: all 0.2s ease;
+        }
+        .btn-neon-primary:hover {
+            background-color: #a29bfe;
+            box-shadow: 0 0 20px rgba(162, 155, 254, 1), inset 0 0 10px #6c5ce7;
+            color: #000;
+        }
+        /* Estilo para el botón de descifrar (naranja) */
+        .btn-neon-secondary {
+            background-color: #ff9900; /* Naranja base */
+            text-shadow: 0 0 5px #ffcc66;
+            box-shadow: 0 0 10px rgba(255, 153, 0, 0.8), inset 0 0 5px #ffcc66;
+            transition: all 0.2s ease;
+        }
+        .btn-neon-secondary:hover {
+            background-color: #ffcc66;
+            box-shadow: 0 0 20px rgba(255, 153, 0, 1), inset 0 0 10px #ff9900;
+            color: #000;
+        }
+        /* Estilo para el botón de descarga (verde) */
+        .btn-neon-download {
+            background-color: #00e676; /* Verde lima base */
+            text-shadow: 0 0 5px #80ffbf;
+            box-shadow: 0 0 10px rgba(0, 230, 118, 0.8), inset 0 0 5px #80ffbf;
+            transition: all 0.2s ease;
+        }
+        .btn-neon-download:hover {
+            background-color: #80ffbf;
+            box-shadow: 0 0 20px rgba(0, 230, 118, 1), inset 0 0 10px #00e676;
+            color: #000;
+        }
+
+        /* Estilo para el área de resultado (Salida de la Consola - amarillo) */
+        #resultadoOutput {
+            color: #fafa00; /* Neón amarillo brillante */
+            text-shadow: 0 0 7px #fafa00;
+            border: 1px dashed #fafa00;
+            background-color: rgba(10, 5, 30, 0.8);
+            /* Ajuste de altura para mostrar múltiples resultados del brute-force */
+            min-height: 4rem;
+            max-height: 25rem; 
+            overflow-y: auto;
+            white-space: pre-wrap; /* Mantiene saltos de línea y formateo */
+        }
+
+        /* Ajustes de tipografía para mantener la estética monospace */
+        .text-xl, .text-2xl, .text-lg, p, label {
+            letter-spacing: 1px;
+        }
+
+        /* Estilos para el mensaje flotante (para notificaciones de éxito/error) */
+        #mensajeFlotante {
+            z-index: 1000;
+            font-size: 1.5rem; /* Ajuste para VT323 */
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.8); /* Sombra predeterminada */
+        }
+
+        /* Estilos específicos para la tabla de pasos */
+        #tablaResultadoContainer table {
+            font-family: 'VT323', monospace;
+            border-color: #e70f0f;
+            /* Asegura que el texto no se corte en modo responsivo */
+            white-space: nowrap; 
+        }
+        #tablaResultadoContainer thead {
+             background-color: rgba(231, 15, 15, 0.1); /* Rojo muy tenue */
+             color: #e70f0f; /* Texto rojo */
+             text-shadow: 0 0 3px rgba(231, 15, 15, 0.7);
+        }
+        #tablaResultadoContainer tbody tr {
+            background-color: rgba(5, 5, 15, 0.7);
+        }
+        #tablaResultadoContainer tbody tr:hover {
+            background-color: rgba(20, 15, 45, 0.9);
+        }
+        #tablaResultadoContainer td {
+            color: #f7f0f0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" class="w-full max-w-5xl rounded-xl p-8 transition-all duration-300">
+    <h1 class="text-4xl font-extrabold text-center text-cyan-400 mb-2 tracking-widest uppercase">
+        Consola Criptográfica
+    </h1>
+    <p class="text-center text-lg text-gray-400 mb-8 tracking-wider">César y Vigenère - Simulación de Procesos</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        
+        <div class="p-4 border-b border-purple-800">
+            <label class="block text-lg font-bold text-purple-400 mb-3">TIPO DE CIFRADO</label>
+            <div class="flex flex-col space-y-2">
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="radio" name="cifrado" value="cesar" checked onchange="toggleUIMode()" class="form-radio h-4 w-4 text-purple-400 border-gray-600 neon-radio">
+                    <span class="ml-2 text-xl text-gray-300">César (Numérico)</span>
+                </label>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="radio" name="cifrado" value="vigenere" onchange="toggleUIMode()" class="form-radio h-4 w-4 text-purple-400 border-gray-600 neon-radio">
+                    <span class="ml-2 text-xl text-gray-300">Vigenère (Clave Palabra)</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="p-4 border-b border-purple-800">
+            <label class="block text-lg font-bold text-purple-400 mb-3">ACCIÓN A EJECUTAR</label>
+            <div class="flex flex-col space-y-2">
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="radio" name="modo" value="cifrar" checked onchange="toggleUIMode()" class="form-radio h-4 w-4 text-purple-400 border-gray-600 neon-radio">
+                    <span class="ml-2 text-xl text-gray-300">CIFRAR (Guardar en Memoria)</span>
+                </label>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="radio" name="modo" value="descifrar-memoria" onchange="toggleUIMode()" class="form-radio h-4 w-4 text-purple-400 border-gray-600 neon-radio">
+                    <span class="ml-2 text-xl text-gray-300">DESCIFRAR (Usar Memoria)</span>
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <div id="entradaContainer" class="mb-6">
+        <label for="textoEntrada" class="block text-lg font-semibold text-purple-300 mb-2">TEXTO DE ENTRADA</label>
+        <textarea id="textoEntrada" rows="4" placeholder="Escribe tu mensaje aquí..."
+                  class="w-full p-3 rounded-md focus:outline-none transition-all neon-input text-xl"></textarea>
+    </div>
+
+    <div id="claveContainer" class="mb-8 transition-opacity duration-300">
+        <label id="claveLabel" for="claveInput" class="block text-lg font-semibold text-purple-300 mb-2">
+            CLAVE: SOLO NÚMEROS ENTEROS (César)
+        </label>
+        <input type="text" id="claveInput" placeholder="Clave numérica para César (Rango: 0-25)"
+               class="w-full p-3 rounded-md focus:outline-none transition-all neon-input text-xl">
+    </div>
+
+    <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 mb-8">
+        
+        <div class="relative flex-1">
+            <button id="ejecutarBtn" onclick="ejecutarCifrado()"
+                    class="w-full px-8 py-3 text-white font-bold rounded-lg uppercase tracking-widest btn-neon-primary transition-all duration-300">
+                EJECUTAR 
+            </button>
+        </div>
+
+        <button id="descargarBtn" onclick="exportarTablaAExcel()"
+                class="px-6 py-3 text-white font-semibold rounded-lg tracking-widest btn-neon-download transition duration-200 hidden">
+            DESCARGAR XLSX
+        </button>
+
+        <button onclick="limpiarTodo()"
+                class="px-6 py-3 bg-gray-700 text-gray-300 font-semibold rounded-lg hover:bg-gray-600 transition duration-200">
+            ELIMINAR
+        </button>
+    </div>
+
+    <div class="p-4 rounded-md">
+        <label class="block text-xl font-bold text-yellow-400 mb-2">RESULTADO:</label>
+        
+        <div id="tablaResultadoContainer" class="mb-4 overflow-x-auto">
+            <!-- La tabla de pasos detallados se inyecta aquí -->
+        </div>
+        
+        <pre id="resultadoOutput" class="break-words min-h-[4rem] p-3 rounded-md text-2xl">// ESPERANDO DATOS...</pre>
+        
+        <div id="mensajeFlotante" class="fixed top-5 left-1/2 -translate-x-1/2 p-3 rounded-md text-white shadow-xl hidden transition-all duration-300 opacity-0"></div>
+    </div>
+
+</div> <!-- Cierre del div id="app" -->
+
+<script>
+// =============================================================================
+// I. CONSTANTES Y VARIABLES GLOBALES
+// =============================================================================
+
+const BASE_UPPER = 'A'.charCodeAt(0); // 65
+const BASE_LOWER = 'a'.charCodeAt(0); // 97
+const ALPHABET_SIZE = 26; // 26 letras en el alfabeto (A=0, Z=25)
+
+// ** VARIABLE DE MEMORIA GLOBAL **
+let _memoriaCifrado = ""; 
+let _datosTabla = []; // Almacena los datos detallados de la última operación para exportar a Excel
+
+
+// ** ELEMENTOS DEL DOM (para fácil acceso)**
+const textoEntrada = document.getElementById('textoEntrada');
+const claveInput = document.getElementById('claveInput');
+const resultadoOutput = document.getElementById('resultadoOutput');
+const tablaContainer = document.getElementById('tablaResultadoContainer');
+const descargarBtn = document.getElementById('descargarBtn');
+
+
+// =============================================================================
+// II. LÓGICA DE CIFRADO Y RECOLECCIÓN DE DATOS
+// =============================================================================
+
+/** Obtiene el valor del radio button seleccionado por su nombre. */
+function getRadioValue(name) {
+    const selector = `input[name="${name}"]:checked`; 
+    const element = document.querySelector(selector);
+    return element ? element.value : null;
+}
+
+// -----------------------------------------------------------------------------
+// CESAR
+// -----------------------------------------------------------------------------
+
+/** Cifra un texto utilizando el Cifrado César y devuelve los pasos detallados (9 columnas). */
+function cifrarCesar(textoPlano, clave) {
+    let textoCifrado = "";
+    const k = clave % ALPHABET_SIZE; 
+    const pasosDetallados = [];
+    
+    for (let i = 0; i < textoPlano.length; i++) {
+        let caracter = textoPlano[i];
+        let code = caracter.charCodeAt(0);
+        let letraCifrada = caracter;
+        let valorP = null;
+        let esLetra = false;
+        let base = null;
+
+        if (code >= BASE_UPPER && code < BASE_UPPER + ALPHABET_SIZE) { base = BASE_UPPER; esLetra = true; }
+        else if (code >= BASE_LOWER && code < BASE_LOWER + ALPHABET_SIZE) { base = BASE_LOWER; esLetra = true; }
+        
+        if (esLetra) {
+            valorP = code - base;
+            let pMasK = valorP + k;
+            let valorC = pMasK % ALPHABET_SIZE;
+            letraCifrada = String.fromCharCode(valorC + base);
+            
+             // Datos para la tabla: 
+             pasosDetallados.push({
+                 // Datos de CIFRADO (Columnas 1 a 6)
+                 P_letra: caracter.toUpperCase(),
+                 P_valor: valorP, // P valor
+                 K: k, // K valor
+                 Suma_PK: pMasK, // P + K
+                 C_valor_mod: valorC, // C valor (resultado)
+                 C_letra: letraCifrada.toUpperCase(),
+                 
+                 // Datos de DESCIFRADO (Columnas 7 a 9 - Rellenadas)
+                 C_valor_input: valorC, // C valor (Input en descifrado - Se mantiene en el objeto para reusar valorC)
+                 Resta_CK: valorC - k, // Resta C-K
+                 P_final: `${valorP} ${caracter.toUpperCase()}` // Resultado (P valor + P letra)
+             });
+        }
+        textoCifrado += letraCifrada;
+    }
+    return { resultado: textoCifrado, pasos: pasosDetallados };
+}
+
+/** Descifra un texto utilizando el Cifrado César y devuelve los pasos detallados (9 columnas). */
+function descifrarCesar(textoCifrado, clave) {
+    let textoDescifrado = "";
+    const k = clave; 
+    const pasosDetallados = [];
+    
+    for (let i = 0; i < textoCifrado.length; i++) {
+        let caracter = textoCifrado[i];
+        let code = caracter.charCodeAt(0);
+        let letraDescifrada = caracter;
+        let valorC = null; // Valor de Cifrado (Input)
+        let valorP = null; // Valor de Plano (Output)
+        let esLetra = false;
+        let base = null;
+
+        if (code >= BASE_UPPER && code < BASE_UPPER + ALPHABET_SIZE) { base = BASE_UPPER; esLetra = true; }
+        else if (code >= BASE_LOWER && code < BASE_LOWER + ALPHABET_SIZE) { base = BASE_LOWER; esLetra = true; }
+
+        if (esLetra) {
+            valorC = code - base; // C valor (input)
+            const restaCK = valorC - k; 
+            
+            valorP = (restaCK % ALPHABET_SIZE + ALPHABET_SIZE) % ALPHABET_SIZE; // P valor (output, manejando negativos)
+            letraDescifrada = String.fromCharCode(valorP + base);
+            
+            // Lógica inversa para rellenar las columnas de CIFRADO (P -> C)
+            const pMasKInverso = valorP + k;
+            const cLetraInversa = String.fromCharCode(pMasKInverso % ALPHABET_SIZE + base);
+
+            // Datos para la tabla: 
+             pasosDetallados.push({
+                 // Datos de CIFRADO (Columnas 1 a 6 - Rellenadas)
+                 P_letra: letraDescifrada.toUpperCase(), // P Letra (Resultado del descifrado)
+                 P_valor: valorP, // P Valor
+                 K: k, // K Valor (Aplica a ambos)
+                 Suma_PK: pMasKInverso, // P + K
+                 C_valor_mod: valorC, // C Valor (de la letra cifrada de entrada)
+                 C_letra: cLetraInversa.toUpperCase(), // C Letra
+                 
+                 // Datos de DESCIFRADO (Columnas 7 a 9 - Llenas)
+                 C_valor_input: valorC, // C Valor (Input en descifrado - Se mantiene en el objeto)
+                 Resta_CK: restaCK, // Resta C-K
+                 P_final: `${valorP} ${letraDescifrada.toUpperCase()}`, // Resultado
+             });
+        }
+        textoDescifrado += letraDescifrada;
+    }
+    return { resultado: textoDescifrado, pasos: pasosDetallados };
+}
+
+
+// -----------------------------------------------------------------------------
+// VIGENÈRE
+// -----------------------------------------------------------------------------
+
+/** Cifra un texto utilizando el Cifrado Vigenère y devuelve los pasos detallados (12 cols). */
+function cifrarVigenere(textoPlano, clave) {
+    let textoCifrado = "";
+    // Limpieza de clave (solo A-Z)
+    const claveMayus = clave.toUpperCase().replace(/[^A-Z]/g, ''); 
+    let indiceClave = 0; 
+    const pasosDetallados = [];
+    
+    if (claveMayus.length === 0) {
+        throw new Error("La clave de Vigenère no puede estar vacía.");
+    }
+
+    for (let i = 0; i < textoPlano.length; i++) {
+        let caracter = textoPlano[i];
+        let code = caracter.charCodeAt(0);
+        let letraCifrada = caracter;
+        let valorP = null;
+        let base = null;
+        
+        let isLetter = (code >= BASE_UPPER && code < BASE_UPPER + ALPHABET_SIZE) || 
+                       (code >= BASE_LOWER && code < BASE_LOWER + ALPHABET_SIZE);
+        
+        if (isLetter) {
+            base = (code >= BASE_UPPER && code < BASE_UPPER + ALPHABET_SIZE) ? BASE_UPPER : BASE_LOWER;
+            
+            let letraClave = claveMayus[indiceClave % claveMayus.length];
+            let k = letraClave.charCodeAt(0) - BASE_UPPER; 
+            
+            valorP = code - base;
+            let pMasK = valorP + k;
+            let valorC = pMasK % ALPHABET_SIZE; 
+            letraCifrada = String.fromCharCode(valorC + base);
+            
+            // Lógica inversa para rellenar las columnas de DESCIFRADO
+            const restaCK = valorC - k; 
+            const correccion26 = restaCK < 0 ? ALPHABET_SIZE : 0;
+            
+            // Registro del paso (13 columnas para la exportación COMPLETA)
+             pasosDetallados.push({
+                 // Datos de CIFRADO (Columnas 1 a 7 - Llenos)
+                 P_letra: caracter.toUpperCase(), // 0
+                 P_valor: valorP, // 1
+                 K_letra: letraClave, // 2
+                 K_valor: k, // 3
+                 Suma: pMasK, // 4 (P+K)
+                 C_valor_mod: valorC, // 5 (C Valor Mod 26)
+                 C_letra: letraCifrada.toUpperCase(), // 6
+                 
+                 // Datos de DESCIFRADO (Columnas 8 a 13 - Rellenados para simular el proceso inverso)
+                 K_letra_rep: letraClave, // 7
+                 K_valor_rep: k, // 8
+                 C_valor_input: valorC, // 9 (Se mantiene aquí, pero se elimina del display/exportación)
+                 Resta_CK: restaCK, // 10
+                 Correcion26: correccion26, // 11
+                 P_final: `${valorP} ${caracter.toUpperCase()}` // 12 (Resultado P valor + P letra)
+             });
+            
+            indiceClave++;
+        }
+        textoCifrado += letraCifrada;
+    }
+    return { resultado: textoCifrado, pasos: pasosDetallados };
+}
+
+/** Descifra un texto utilizando el Cifrado Vigenère y devuelve los pasos detallados (12 cols). */
+function descifrarVigenere(textoCifrado, clave) {
+    let textoDescifrado = "";
+    // Limpieza de clave (solo A-Z)
+    const claveMayus = clave.toUpperCase().replace(/[^A-Z]/g, ''); 
+    let indiceClave = 0; 
+    const pasosDetallados = [];
+
+    if (claveMayus.length === 0) {
+        throw new Error("La clave de Vigenère no puede estar vacía.");
+    }
+
+    for (let i = 0; i < textoCifrado.length; i++) {
+        let caracter = textoCifrado[i]; // C Letra (Input)
+        let code = caracter.charCodeAt(0);
+        let letraDescifrada = caracter;
+        let valorC = null;
+        let base = null;
+
+        let isLetter = (code >= BASE_UPPER && code < BASE_UPPER + ALPHABET_SIZE) || 
+                       (code >= BASE_LOWER && code < BASE_LOWER + ALPHABET_SIZE);
+        
+        if (isLetter) {
+            base = (code >= BASE_UPPER && code < BASE_UPPER + ALPHABET_SIZE) ? BASE_UPPER : BASE_LOWER;
+            
+            let letraClave = claveMayus[indiceClave % claveMayus.length];
+            let k = letraClave.charCodeAt(0) - BASE_UPPER; 
+            
+            valorC = code - base; // C Valor (Input)
+            const restaCK = valorC - k; 
+            
+            const correccion26 = restaCK < 0 ? ALPHABET_SIZE : 0;
+            const valorP = (restaCK % ALPHABET_SIZE + ALPHABET_SIZE) % ALPHABET_SIZE; // P Valor (Output)
+            let letraPlana = String.fromCharCode(valorP + base); // P Letra (Output)
+            
+            letraDescifrada = letraPlana;
+            
+            // Lógica inversa para rellenar las columnas de CIFRADO (P -> C)
+            const pMasKInverso = valorP + k;
+            const cLetraInversa = String.fromCharCode(pMasKInverso % ALPHABET_SIZE + base);
+
+
+             pasosDetallados.push({
+                 // Datos de CIFRADO (Columnas 1 a 7 - Rellenadas)
+                 P_letra: letraPlana.toUpperCase(), // 0 (P Letra)
+                 P_valor: valorP, // 1 (P Valor)
+                 K_letra: letraClave, // 2 (K Letra)
+                 K_valor: k, // 3 (K Valor)
+                 Suma: pMasKInverso, // 4 (P+K)
+                 C_valor_mod: valorC, // 5 (C Valor de la letra cifrada de entrada)
+                 C_letra: cLetraInversa.toUpperCase(), // 6 (C Letra)
+                 
+                 // Datos de DESCIFRADO (Columnas 8 a 13 - Llenas)
+                 K_letra_rep: letraClave, // 7 (K Letra Rep)
+                 K_valor_rep: k, // 8 (K Valor Rep)
+                 C_valor_input: valorC, // 9 (Se mantiene aquí, pero se elimina del display/exportación)
+                 Resta_CK: restaCK, // 10 (Resta C-K)
+                 Correcion26: correccion26, // 11 (Corrección +26)
+                 P_final: `${valorP} ${letraPlana.toUpperCase()}` // 12 (Resultado final)
+             });
+
+            indiceClave++;
+        }
+        textoDescifrado += letraDescifrada; 
+    }
+    return { resultado: textoDescifrado, pasos: pasosDetallados };
+}
+
+
+// =============================================================================
+// III. MANEJO DEL DOM, TABLA Y EXPORTACIÓN
+// =============================================================================
+
+/** Muestra un mensaje flotante temporal. */
+function mostrarMensaje(msg, type) {
+    const mf = document.getElementById('mensajeFlotante');
+    mf.textContent = msg;
+    
+    mf.classList.remove('bg-green-600', 'bg-red-600', 'bg-gray-600', 'opacity-100', 'bg-purple-700');
+    
+    // Colores y sombras para el efecto Neon
+    if (type === 'green') {
+        mf.classList.add('bg-green-700');
+        mf.style.boxShadow = '0 0 10px rgba(0, 255, 0, 0.8)';
+    } else if (type === 'red') {
+        mf.classList.add('bg-red-700');
+        mf.style.boxShadow = '0 0 10px rgba(255, 0, 0, 0.8)';
+    } else {
+        mf.classList.add('bg-purple-700');
+        mf.style.boxShadow = '0 0 10px rgba(162, 155, 254, 0.9)';
+    }
+
+    mf.classList.remove('hidden', 'opacity-0');
+    setTimeout(() => { mf.classList.add('opacity-100'); }, 10); 
+
+    setTimeout(() => {
+        mf.classList.remove('opacity-100');
+        mf.classList.add('opacity-0');
+        setTimeout(() => {
+            mf.classList.add('hidden');
+            mf.style.boxShadow = 'none';
+        }, 300);
+    }, 3000);
+}
+
+/** Muestra el resultado simple (Solo para errores o al limpiar). */
+function mostrarResultado(mensaje, tipo = 'ok') {
+    resultadoOutput.classList.remove('hidden'); 
+    tablaContainer.innerHTML = ''; 
+    descargarBtn.classList.add('hidden'); 
+    
+    resultadoOutput.style.textShadow = 'none';
+    resultadoOutput.classList.remove('text-red-500', 'text-yellow-400');
+    resultadoOutput.classList.add('text-yellow-400');
+    resultadoOutput.style.whiteSpace = 'pre-wrap';
+    
+    if (tipo === 'error') {
+        resultadoOutput.textContent = `// ERROR:: ${mensaje}`;
+        resultadoOutput.classList.remove('text-yellow-400');
+        resultadoOutput.classList.add('text-red-500');
+        resultadoOutput.style.textShadow = '0 0 7px #ef4444';
+    } else { // 'ok' o default
+        resultadoOutput.textContent = mensaje;
+        resultadoOutput.style.textShadow = '0 0 7px #fafa00';
+    }
+}
+
+
+/** * Función CRÍTICA: Genera y muestra la tabla detallada.
+ * Muestra las columnas completas SOLO en modo Descifrar. 
+ * Guarda la estructura completa en _datosTabla SIEMPRE.
+ */
+function generarTablaDetalladaHTML(pasos, resultadoFinal, operacion, tipoCifrado) {
+    
+    if (pasos.length === 0) {
+        mostrarResultado(`El texto ingresado solo contiene caracteres no alfabéticos.`, 'error');
+        return;
+    }
+
+    resultadoOutput.classList.add('hidden');
+    
+    let fullHeaders, fullDataMap; // Estructura completa para Excel (y Descifrado)
+    let displayHeaders, displayDataMap; // Estructura de visualización (condicional)
+
+    const isDescifrando = operacion === 'descifrar-memoria';
+
+    // 1. DEFINICIÓN DE ESTRUCTURAS DE DATOS (COMPLETA y de VISUALIZACIÓN)
+    if (tipoCifrado === 'vigenere') {
+        // Estructura COMPLETA de 12 columnas
+        fullHeaders = [
+            'P Letra', 'P Valor', 'K Letra', 'K Valor', 'Suma (P+K)', 'C Valor (Mod 26)',
+            'C Letra', // 7. Finaliza el Cifrado
+
+            // 8. Inicia Descifrado (Orden modificado)
+            'K Letra (Rep)', 'K Valor (Rep)', 
+            // 'C Valor (Input)', <-- COLUMNA ELIMINADA DE LA EXPORTACIÓN/DISPLAY
+            'Resta (C-K)', 'Corrección (+26)',
+            'P Final (Usuario Original)' 
+        ];
+        
+        // Mapeo de datos para la exportación COMPLETA (12 datos por fila)
+        fullDataMap = pasos.map(p => {
+            return [
+                { value: p.P_letra, key: 'P_letra' }, // 0
+                { value: p.P_valor, key: 'P_valor' }, // 1
+                { value: p.K_letra, key: 'K_letra' }, // 2
+                { value: p.K_valor, key: 'K_valor' }, // 3
+                { value: p.Suma, key: 'Suma' },    // 4
+                { value: p.C_valor_mod, key: 'C_valor_mod' }, // 5
+                { value: p.C_letra, key: 'C_letra' }, // 6
+                
+                { value: p.K_letra_rep, key: 'K_letra_rep' }, // 7
+                { value: p.K_valor_rep, key: 'K_valor_rep' }, // 8
+                // Se omite p.C_valor_input para el display/exportación
+                { value: p.Resta_CK, key: 'Resta_CK' }, // 9 
+                { value: p.Correcion26, key: 'Correcion26' }, // 10 
+                { value: p.P_final, key: 'P_final' } // 11 
+            ];
+        });
+        
+        // Estructura de VISUALIZACIÓN Cifrado-Only (7 columnas)
+        const cifradoHeaders = ['P Letra', 'P Valor', 'K Letra', 'K Valor', 'Suma (P+K)', 'C Valor (Mod 26)', 'C Letra'];
+        const cifradoDataKeys = ['P_letra', 'P_valor', 'K_letra', 'K_valor', 'Suma', 'C_valor_mod', 'C_letra'];
+
+        // Asignación de datos para EXPORTACIÓN (siempre la estructura completa de 12 columnas)
+        const datosParaExportar = fullDataMap.map(row => row.map(cell => cell.value));
+        _datosTabla = [fullHeaders, ...datosParaExportar];
+
+        // Asignación para DISPLAY (condicional)
+        if (isDescifrando) {
+            displayHeaders = fullHeaders; // Muestra la tabla completa (12 columnas)
+            displayDataMap = fullDataMap;
+        } else { 
+            displayHeaders = cifradoHeaders; // Muestra solo las columnas de Cifrado (7 columnas)
+            // Reducir el mapeo de datos solo a las claves de cifrado
+            displayDataMap = pasos.map(p => {
+                return cifradoDataKeys.map(key => ({ 
+                    value: p[key] !== undefined ? p[key] : '', 
+                    key: key 
+                }));
+            });
+        }
+
+    } else { // CIFRADO CÉSAR
+        
+        // Estructura COMPLETA de 9 columnas (QUITAMOS 'C Valor (Input)')
+        fullHeaders = [
+            'P Letra', 'P Valor', 'K Valor (Cifrado)', 'Suma (P+K)', 'C Valor (Mod 26)', 'C Letra', 
+            // Inicia Descifrado (Orden modificado)
+            'K Valor (Descifrado)', 'Resta (C-K)', 
+            'P Final (Usuario Original)' 
+        ];
+
+        // Mapeo de datos para la exportación COMPLETA (9 datos por fila)
+        fullDataMap = pasos.map(p => {
+            return [
+                { value: p.P_letra, key: 'P_letra' },     // 0
+                { value: p.P_valor, key: 'P_valor' },     // 1
+                { value: p.K, key: 'K' },                 // 2
+                { value: p.Suma_PK, key: 'Suma_PK' },     // 3
+                { value: p.C_valor_mod, key: 'C_valor_mod' }, // 4
+                { value: p.C_letra, key: 'C_letra' },     // 5
+                
+                //{ value: p.C_valor_input, key: 'C_valor_input' }, // COLUMNA ELIMINADA
+                
+                { value: p.K, key: 'K_Rep' },             // 6
+                { value: p.Resta_CK, key: 'Resta_CK' },   // 7
+                { value: p.P_final, key: 'P_final' }      // 8
+            ];
+        });
+        
+        // Estructura de VISUALIZACIÓN Cifrado-Only (6 columnas)
+        const cifradoHeaders = ['P Letra', 'P Valor', 'K Valor (Cifrado)', 'Suma (P+K)', 'C Valor (Mod 26)', 'C Letra'];
+        const cifradoDataKeys = ['P_letra', 'P_valor', 'K', 'Suma_PK', 'C_valor_mod', 'C_letra'];
+
+        // Asignación de datos para EXPORTACIÓN (siempre la estructura completa de 9 columnas)
+        const datosParaExportar = fullDataMap.map(row => row.map(cell => cell.value));
+        _datosTabla = [fullHeaders, ...datosParaExportar];
+
+        // Asignación para DISPLAY (condicional)
+        if (isDescifrando) {
+            displayHeaders = fullHeaders; // Muestra la tabla completa (9 columnas)
+            displayDataMap = fullDataMap;
+        } else { 
+            displayHeaders = cifradoHeaders; // Muestra solo las columnas de Cifrado (6 columnas)
+            // Reducir el mapeo de datos solo a las claves de cifrado
+             displayDataMap = pasos.map(p => {
+                return cifradoDataKeys.map(key => ({ 
+                    value: p[key] !== undefined ? p[key] : '', 
+                    key: key 
+                }));
+            });
+        }
+    }
+
+    // 2. GENERACIÓN DEL HTML DE LA TABLA (Usa displayHeaders y displayDataMap, que ahora son condicionales)
+    const operacionDisplay = isDescifrando ? 'DESCIFRADO (Pasos Completos)' : 'CIFRADO (Pasos Principales)';
+
+    let tablaHTML = `
+        <h3 class="text-xl font-bold text-cyan-300 mb-3 mt-6 border-b border-cyan-700 pb-2">
+            Detalle del Proceso (${operacionDisplay} - ${tipoCifrado.toUpperCase()})
+        </h3>
+        <div class="overflow-x-auto w-full">
+            <table id="tablaExportable" class="text-sm text-left text-gray-400 border border-purple-800">
+                <thead class="text-xs uppercase bg-purple-900/50 text-purple-300">
+                    <tr>
+                        ${displayHeaders.map(h => `<th scope="col" class="py-2 px-3">${h}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${displayDataMap.map(row => {
+                        return `
+                            <tr class="bg-purple-900/20 border-b border-purple-800 hover:bg-purple-900/40">
+                                ${row.map(cell => `
+                                    <td class="py-2 px-3 font-mono">
+                                        ${cell.value}
+                                    </td>
+                                `).join('')}
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    // 3. ACTUALIZAR DOM Y ESTADO
+    tablaContainer.innerHTML = tablaHTML;
+    descargarBtn.classList.remove('hidden'); // Mostrar botón de descarga
+
+    // Mostrar el resultado final debajo de la tabla
+    resultadoOutput.classList.remove('hidden');
+    resultadoOutput.classList.remove('text-red-500');
+    resultadoOutput.classList.add('text-yellow-400');
+    resultadoOutput.style.textShadow = '0 0 7px #fafa00';
+    resultadoOutput.textContent = `// RESULTADO FINAL: ${resultadoFinal}`;
+}
+
+
+/** Expone la función principal al botón Ejecutar. */
+function ejecutarCifrado() {
+    try {
+        const tipoCifrado = getRadioValue('cifrado');
+        const modo = getRadioValue('modo');
+        let texto = textoEntrada.value.trim();
+        const claveStr = claveInput.value.trim();
+        let clave;
+        let resultadoObj = { resultado: "", pasos: [] };
+
+        // 1. VALIDACIÓN GENERAL
+        if (!texto && modo === 'cifrar') {
+            mostrarResultado('ERROR: Introduce texto para cifrar.', 'error');
+            return;
+        }
+
+        // 2. VALIDACIÓN ESPECÍFICA DE CLAVE
+
+        if (tipoCifrado === 'cesar') {
+            clave = parseInt(claveStr, 10);
+            
+            if (isNaN(clave)) {
+                mostrarResultado('ERROR: Para César, la clave debe ser un número entero.', 'error');
+                return;
+            }
+            
+            // VALIDACIÓN ESTRICTA DEL RANGO DE CLAVE [0, 25]
+            if (clave < 0 || clave > 25) {
+                mostrarResultado('ERROR: La clave para el Cifrado César debe ser un número positivo en el rango de 0 a 25.', 'error');
+                return;
+            }
+            
+        } else if (tipoCifrado === 'vigenere') {
+            // Solo letras (A-Z) para Vigenère
+            clave = claveStr.toUpperCase().replace(/[^A-Z]/g, '');
+            if (!clave) {
+                mostrarResultado('ERROR: Para Vigenère, la clave debe ser una palabra (solo letras).', 'error');
+                return;
+            }
+        }
+        
+        // 3. EJECUCIÓN 
+        
+        if (modo === 'cifrar') {
+            // CIFRAR
+            if (tipoCifrado === 'cesar') {
+                resultadoObj = cifrarCesar(texto, clave);
+            } else { // vigenere
+                resultadoObj = cifrarVigenere(texto, clave);
+            }
+            // Guardar en memoria el texto cifrado y la clave
+            _memoriaCifrado = resultadoObj.resultado;
+            claveInput.dataset.ultimaClave = claveStr; // Guardar la clave tal como se introdujo
+            claveInput.dataset.ultimoCifrado = tipoCifrado;
+            
+            // Mostrar pasos detallados del cifrado (Solo columnas de Cifrado)
+            generarTablaDetalladaHTML(resultadoObj.pasos, resultadoObj.resultado, 'cifrar', tipoCifrado);
+            
+            mostrarMensaje(`Texto CIFRADO y guardado en memoria. Clave: ${claveStr}.`, 'green');
+
+        } else { // modo === 'descifrar-memoria'
+            // DESCIFRAR
+            if (!_memoriaCifrado) {
+                mostrarResultado('ERROR: No hay texto cifrado guardado en la memoria.', 'error');
+                return;
+            }
+            texto = _memoriaCifrado; // Usamos el texto de la memoria
+
+            // Usar la clave de la interfaz. Si está vacía, intentar usar la última clave guardada.
+            let claveDescifrar = claveStr || claveInput.dataset.ultimaClave;
+            let tipoCifradoMemoria = claveInput.dataset.ultimoCifrado;
+            
+            if (!claveDescifrar) {
+                mostrarResultado('ERROR: No se ha encontrado una clave para descifrar.', 'error');
+                return;
+            }
+
+            // Adaptar la clave para la función de descifrado
+            if (tipoCifradoMemoria === 'cesar') {
+                claveDescifrar = parseInt(claveDescifrar, 10);
+                
+                // VALIDACIÓN ESTRICTA DEL RANGO DE CLAVE [0, 25] AL DESCIFRAR
+                if (isNaN(claveDescifrar) || claveDescifrar < 0 || claveDescifrar > 25) {
+                    mostrarResultado('ERROR: La clave de descifrado César debe ser un número positivo en el rango de 0 a 25.', 'error');
+                    return;
+                }
+                
+                resultadoObj = descifrarCesar(texto, claveDescifrar);
+
+            } else { // vigenere
+                resultadoObj = descifrarVigenere(texto, claveDescifrar);
+            }
+            
+            // Mostrar pasos detallados del descifrado (Todas las columnas)
+            generarTablaDetalladaHTML(resultadoObj.pasos, resultadoObj.resultado, 'descifrar-memoria', tipoCifradoMemoria);
+            
+            mostrarMensaje(`Texto DESCIFRADO desde memoria. Clave usada: ${claveDescifrar}.`, 'green');
+        }
+
+    } catch (e) {
+        console.error("Error en ejecutarCifrado:", e);
+        mostrarResultado(`Error interno: ${e.message}`, 'error');
+    }
+}
+
+
+/** Limpia todos los campos, la memoria y el resultado. */
+function limpiarTodo() {
+    textoEntrada.value = '';
+    claveInput.value = '';
+    _memoriaCifrado = '';
+    _datosTabla = [];
+    claveInput.dataset.ultimaClave = ''; // Limpiar también la última clave guardada
+    claveInput.dataset.ultimoCifrado = ''; 
+    
+    // Resetear el modo a Cifrar César y actualizar la UI
+    document.querySelector('input[name="cifrado"][value="cesar"]').checked = true;
+    document.querySelector('input[name="modo"][value="cifrar"]').checked = true;
+    toggleUIMode();
+
+    mostrarResultado('// SISTEMA REINICIADO. Memoria borrada.', 'ok');
+    mostrarMensaje('Sistema reiniciado.', 'gray');
+}
+
+
+/** Alterna la UI para César vs Vigenère. */
+function toggleUIMode() {
+    const tipoCifrado = getRadioValue('cifrado');
+    const modo = getRadioValue('modo');
+    const claveLabel = document.getElementById('claveLabel');
+    const claveInput = document.getElementById('claveInput');
+    const ejecutarBtn = document.getElementById('ejecutarBtn');
+    const entradaContainer = document.getElementById('entradaContainer');
+    
+    // Ajustar placeholder y label según el tipo de cifrado
+    if (tipoCifrado === 'cesar') {
+        claveLabel.textContent = 'CLAVE: SOLO NÚMEROS ENTEROS (César)';
+        claveInput.placeholder = 'Clave numérica para César (Rango: 0-25)';
+        claveInput.type = 'text'; 
+    } else { // vigenere
+        claveLabel.textContent = 'CLAVE: SOLO LETRAS (Vigenère)';
+        claveInput.placeholder = 'Clave de palabra para Vigenère (Ej: SECRETO)';
+        claveInput.type = 'text';
+    }
+
+    // Ajustar el botón de Ejecutar
+    if (modo === 'cifrar') {
+        ejecutarBtn.textContent = `CIFRAR`;
+        entradaContainer.classList.remove('opacity-30', 'pointer-events-none');
+        ejecutarBtn.classList.add('btn-neon-primary');
+        ejecutarBtn.classList.remove('btn-neon-secondary');
+    } else { // modo === 'descifrar-memoria'
+        ejecutarBtn.textContent = `DESCIFRAR DESDE MEMORIA`;
+        entradaContainer.classList.add('opacity-30', 'pointer-events-none'); 
+        ejecutarBtn.classList.remove('btn-neon-primary');
+        ejecutarBtn.classList.add('btn-neon-secondary'); 
+    }
+}
+
+// Inicializar la UI al cargar
+document.addEventListener('DOMContentLoaded', () => {
+    toggleUIMode();
+    // Placeholder para la inicialización de Firebase/Auth
+    if (typeof window.auth !== 'undefined' && window.auth.currentUser) {
+        console.log(`Usuario autenticado: ${window.auth.currentUser.uid}`);
+    }
+});
+
+
+/** * Exporta los datos de la tabla a un archivo Excel (.xlsx).
+ * NOTA: Usa la librería SheetJS/xlsx.js cargada al inicio del archivo.
+ * Usa la variable _datosTabla que SIEMPRE contiene la tabla COMPLETA.
+ */
+function exportarTablaAExcel() {
+    // 1. Verificar si hay datos
+    if (_datosTabla.length === 0) {
+        mostrarMensaje('No hay datos de tabla para exportar.', 'red');
+        return;
+    }
+    
+    // 2. Crear el libro de trabajo (workbook) a partir de los datos guardados
+    // _datosTabla ya tiene los headers en el primer elemento
+    const ws = XLSX.utils.aoa_to_sheet(_datosTabla);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "PasosCifrado");
+
+    // 3. Generar y descargar el archivo Excel
+    XLSX.writeFile(wb, "Cifrado_Detalle.xlsx");
+    mostrarMensaje('Tabla exportada como Cifrado_Detalle.xlsx', 'green');
+}
+
+</script>
