@@ -1,121 +1,132 @@
-/* Importación de la fuente retro */
-@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+/* Estilos Generales de Consola Criptográfica */
+:root {
+    --color-bg-dark: #1a0835; /* Fondo muy oscuro, casi negro-púrpura */
+    --color-border-neon: #08fbe7; /* Magenta Neón */
+    --color-text-neon: #0de2e2; /* Cian Neón */
+    --color-primary: #8b5cf6; /* Morado base */
+    --color-secondary: #0d9488; /* Verde azulado base */
+}
 
-/* Estilos base: Fondo oscuro y degradado. CORRECCIÓN: Se eliminó el centrado flex. */
 body {
-    font-family: 'VT323', monospace;
-    background: linear-gradient(145deg, #0f0a28 0%, #1a0f40 100%);
-    /* ELIMINADAS: display: flex, justify-content: center, align-items: center */
-    min-height: 100vh;
-    padding: 20px;
-    /* Color de texto base (casi blanco) */
-    color: #f7f0f0; 
+    font-family: 'Electrolize', sans-serif;
+    background-color: var(--color-bg-dark); 
+    color: #d1d5db; /* Gris claro */
+    background-image: radial-gradient(circle, rgba(20, 10, 30, 0.8) 1px, transparent 1px);
+    background-size: 40px 40px;
 }
 
-/* Estilos de la caja principal (el "Monitor"). AÑADIR CENTRADO AQUÍ. */
-#app {
-    /* Fondo más negro para mayor contraste */
-    background: rgba(5, 5, 15, 0.95);
-    /* Borde Rojo Intenso */
-    border: 2px solid #e70f0f; 
-    /* Sombra Roja/Púrpura */
-    box-shadow: 0 0 20px rgba(108, 92, 231, 0.7); 
-    
-    /* AÑADIDO: Centra la consola horizontalmente */
-    margin-left: auto;
-    margin-right: auto;
+.main-console {
+    border: 2px solid var(--color-border-neon);
+    box-shadow: 0 0 20px var(--color-border-neon), inset 0 0 20px var(--color-border-neon);
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 2.5rem;
+    border-radius: 5px;
+    max-width: 900px;
 }
 
-/* Efecto de neón en el título h1 (sombra ROJA en CSS) */
-#app h1 {
-    text-shadow: 0 0 7px #eb0c0c, 0 0 15px #f30d0d; 
+/* Título Principal */
+.console-title {
+    font-family: 'Space Mono', monospace;
+    text-shadow: 0 0 10px #ff0000, 0 0 20px #08d1e3;
+    color: #ff1900;
 }
 
-/* Efecto de borde de neón en los inputs y textareas */
-.neon-input {
-    background-color: rgba(20, 15, 45, 0.8);
-    border: 1px solid #4a4175;
-    /* Color de texto rojo neón */
-    color: #f00b0b; 
-    /* Sombra de texto rojo/azul */
-    text-shadow: 0 0 5px #011214; 
+/* Inputs y Textareas */
+.console-input {
+    background-color: #0d0615;
+    border: 1px solid #4a004a;
+    color: var(--color-text-neon);
+    box-shadow: 0 0 5px #4a004a;
 }
-.neon-input:focus {
-    /* Color de foco púrpura/azul */
-    border-color: #a29bfe;
-    box-shadow: 0 0 10px rgba(162, 155, 254, 0.9);
+.console-input:focus {
+    outline: none;
+    border-color: var(--color-border-neon);
+    box-shadow: 0 0 10px var(--color-border-neon);
 }
 
-/* Estilos para el botón principal (EJECUTAR) */
-.btn-neon-primary {
-    background-color: #6c5ce7; /* Púrpura base */
-    text-shadow: 0 0 5px #a29bfe;
-    box-shadow: 0 0 10px rgba(162, 155, 254, 0.8), inset 0 0 5px #a29bfe;
-    transition: all 0.2s ease;
+/* Radio Buttons */
+input[type="radio"].form-radio {
+    color: #ff0000 !important; /* Rojo */
+    background-color: #0d0615;
+    border-color: #ff00ff;
+    box-shadow: none;
 }
-.btn-neon-primary:hover {
-    background-color: #a29bfe;
-    box-shadow: 0 0 20px rgba(162, 155, 254, 1), inset 0 0 10px #6c5ce7;
-    color: #000;
+input[type="radio"].form-radio:checked {
+     box-shadow: 0 0 5px #ff00ff;
 }
 
-/* Estilo para el área de resultado (Salida de la Consola - amarillo) */
-#resultadoOutput {
-    color: #fafa00; /* Neón amarillo brillante */
-    text-shadow: 0 0 7px #fafa00;
-    border: 1px dashed #fafa00;
-    background-color: rgba(10, 5, 30, 0.8);
-    /* Ajuste de altura para mostrar múltiples resultados del brute-force */
-    min-height: 8rem;
-    max-height: 25rem; 
-    overflow-y: auto;
-    white-space: pre-wrap; /* Mantiene saltos de línea y formateo */
+/* Botón Ejecutar (CIFRAR - Primario) */
+.btn-neon-execute {
+    background: #8b5cf6;
+    color: white;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 10px #8b5cf6, 0 0 20px #a78bfa;
+}
+.btn-neon-execute:hover {
+    background: #7c3aed;
+    box-shadow: 0 0 15px #8b5cf6, 0 0 30px #a78bfa;
 }
 
-/* Estilos de los radios (Selector de modo) */
-.neon-radio:checked {
-    background-color: #a29bfe;
-    border-color: #a29bfe;
+/* Botón Descifrar (Secundario - Verde Azulado) */
+.btn-neon-descifrar {
+    background: var(--color-secondary);
+    color: white;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 10px var(--color-secondary), 0 0 20px #e4a206;
 }
-.neon-radio:checked + span {
-    color: #a29bfe;
-    text-shadow: 0 0 5px #a29bfe;
-}
-
-/* Ajustes de tipografía para mantener la estética monospace */
-.text-xl, .text-2xl, .text-lg, p, label {
-    letter-spacing: 1px;
+.btn-neon-descifrar:hover {
+    background: #e09806;
+    box-shadow: 0 0 15px var(--color-secondary), 0 0 30px #e5a606;
 }
 
-/* Estilos para el mensaje flotante (para notificaciones de éxito/error) */
-#mensajeFlotante {
-    z-index: 1000;
-    font-size: 1.5rem; /* Ajuste para VT323 */
-    box-shadow: 0 0 10px rgba(0, 255, 0, 0.8); /* Sombra predeterminada */
+/* Botón Eliminar (Limpiar) */
+.btn-neon-delete {
+    background: #27272a; /* Zinc oscuro */
+    color: #ef4444; /* Rojo */
+    border: 1px solid #ef4444;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 5px #ef4444;
+}
+.btn-neon-delete:hover {
+    background: #18181b;
+    box-shadow: 0 0 15px #ef4444;
 }
 
-/* --- Estilos para la Firma en la Esquina (Footer) --- */
-.footer-esquina {
-    /* Fija el elemento a la ventana del navegador */
-    position: fixed; 
-    
-    /* Lo ancla a 20px de la parte inferior y derecha */
-    bottom: 20px;
-    right: 20px;
-    
-    /* Asegura que no sea demasiado ancho */
-    max-width: 300px; 
-    
-    /* Color de fondo sutil para que se vea */
-    background-color: rgba(0, 0, 0, 0.4); 
-    
-    /* Relleno interno para que el texto no toque el borde */
-    padding: 10px; 
-    
-    /* Z-index alto para que esté encima de otros elementos */
-    z-index: 1000; 
-    
-    /* Alineación de texto */
-    text-align: right;
-    border-radius: 4px; /* Opcional: bordes redondeados */
+/* Botón Descargar (Exportar) */
+.btn-neon-download {
+    background: #0d9488;
+    color: white;
+    box-shadow: 0 0 5px #0d9488;
+    transition: all 0.3s ease;
+}
+.btn-neon-download:hover {
+    background: #40ed06;
+    box-shadow: 0 0 15px #02e743;
+}
+
+/* Contenedor de Resultado/Mensaje */
+#resultadoContainer {
+    background-color: rgba(255, 0, 255, 0.1); 
+    border: 1px dashed var(--color-border-neon);
+    color: #ffccff;
+}
+
+/* Estilos de la tabla de pasos */
+#tablaExportable {
+    border-collapse: collapse;
+    font-family: 'Space Mono', monospace;
+}
+#tablaExportable th {
+    background-color: rgba(0, 255, 255, 0.2);
+    color: var(--color-text-neon);
+    border-color: #008080;
+}
+#tablaExportable td {
+    border-color: #0d0615;
+}
+.table-row-style {
+    background-color: #120a1c;
+}
+.table-row-style:hover {
+    background-color: #1f112e;
 }
